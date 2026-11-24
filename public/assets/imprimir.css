@@ -1,0 +1,59 @@
+/* Documentos imprimibles de MecaniGest: tamaño carta, tinta oscura sobre blanco. */
+@page { size: letter; margin: 14mm 13mm; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #e9e4dc; color: #1f1a15; font: 12px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.barra-impresion { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 16px; background: #100904; color: #ffedd7; font-size: 13px; z-index: 1; }
+.barra-impresion button { background: #ffedd7; color: #100904; border: 0; border-radius: 30px; padding: 9px 18px; font: 600 12px system-ui, sans-serif; cursor: pointer; }
+.barra-impresion button:disabled { opacity: .5; cursor: default; }
+.documento { max-width: 216mm; margin: 18px auto; background: #fff; padding: 14mm 13mm; box-shadow: 0 2px 14px rgba(0, 0, 0, .12); }
+.encabezado { display: flex; justify-content: space-between; gap: 20px; border-bottom: 2px solid #1f1a15; padding-bottom: 10px; margin-bottom: 14px; }
+.encabezado h1 { margin: 0 0 4px; font-size: 20px; letter-spacing: .02em; }
+.encabezado p { margin: 0; color: #5c5148; font-size: 11px; }
+.folio { text-align: right; display: flex; flex-direction: column; gap: 2px; }
+.folio span { text-transform: uppercase; font-size: 11px; letter-spacing: .08em; color: #5c5148; }
+.folio strong { font-size: 22px; }
+.folio small { color: #5c5148; font-size: 10px; }
+.aviso { border: 2px solid #8b2f1c; color: #8b2f1c; padding: 8px 10px; font-weight: 700; margin-bottom: 12px; text-align: center; }
+.bloque { margin-bottom: 12px; break-inside: avoid; }
+.bloque h2 { font-size: 10px; text-transform: uppercase; letter-spacing: .09em; color: #5c5148; margin: 0 0 5px; border-bottom: 1px solid #d9d1c7; padding-bottom: 3px; }
+.rejilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.rejilla.dos { grid-template-columns: 1fr 1fr; }
+.columna div { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+.columna span { color: #5c5148; }
+.columna strong { text-align: right; font-weight: 600; overflow-wrap: anywhere; }
+.multilinea { white-space: pre-wrap; margin: 0; }
+.grande { font-size: 18px; font-weight: 700; margin: 2px 0; }
+.tenue { color: #8a7f74; font-style: italic; }
+.combustible { display: flex; gap: 6px; }
+.combustible span { flex: 1; text-align: center; border: 1px solid #b9ada0; border-radius: 4px; padding: 5px 0; font-size: 11px; }
+.combustible .marcado { background: #1f1a15; color: #fff; border-color: #1f1a15; font-weight: 700; }
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #5c5148; border-bottom: 1px solid #1f1a15; padding: 5px 4px; }
+td { border-bottom: 1px solid #e4ddd4; padding: 5px 4px; vertical-align: top; }
+.num { text-align: right; white-space: nowrap; }
+.totales { margin: 8px 0 0 auto; width: 55%; }
+.totales div { display: flex; justify-content: space-between; padding: 3px 4px; }
+.totales .total { border-top: 1px solid #1f1a15; font-size: 13px; font-weight: 700; }
+.fotos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.fotos figure { margin: 0; break-inside: avoid; }
+.fotos img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid #d9d1c7; display: block; }
+.fotos figcaption { font-size: 9px; color: #5c5148; margin-top: 2px; }
+.leyenda { font-size: 10px; color: #5c5148; margin: 14px 0 0; }
+.linea-monto { display: inline-block; width: 45mm; border-bottom: 1px solid #1f1a15; }
+.firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 30mm; margin-top: 26mm; break-inside: avoid; }
+.firmas div { text-align: center; font-size: 11px; }
+.firmas span { display: block; border-top: 1px solid #1f1a15; margin-bottom: 4px; }
+.firmas small { display: block; color: #5c5148; }
+.error { color: #8b2f1c; font-weight: 600; }
+@media (max-width: 640px) {
+  .documento { margin: 0; padding: 16px; box-shadow: none; }
+  .rejilla, .rejilla.dos { grid-template-columns: 1fr; }
+  .fotos { grid-template-columns: repeat(2, 1fr); }
+  .totales { width: 100%; }
+  .firmas { gap: 12mm; }
+}
+@media print {
+  body { background: #fff; }
+  .barra-impresion { display: none; }
+  .documento { margin: 0; padding: 0; box-shadow: none; max-width: none; }
+}

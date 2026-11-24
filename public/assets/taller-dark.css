@@ -19,3 +19,27 @@ th{background:#1d130c;color:var(--muted);font-weight:500;letter-spacing:0;border
 dialog{background:#1b110b;color:var(--cream);border:1px solid #6c5f51;border-radius:12px;box-shadow:none}dialog::backdrop{background:#100904bb;backdrop-filter:none}.modal-head,.modal-pie{border-color:var(--line);background:transparent}.modal-head h2{font-weight:500}.modal-pie{background:#22170e}#notificacion{background:var(--surface);color:var(--cream);border:1px solid #8a735c;box-shadow:none;border-radius:12px}
 .login-return{display:inline-block;font-size:11px;text-transform:uppercase;color:var(--muted);text-decoration:none;margin-bottom:25px}.login-return:hover{text-decoration:underline}
 @media(max-width:850px){.login{grid-template-columns:1fr}.login-presentacion{display:none}.login-formulario{min-height:100svh;padding:35px 25px}.sidebar.abierta{box-shadow:none;border-right:1px solid #8a735c}}@media(max-width:520px){.main{padding:25px 15px}.stat{padding:16px 12px}.stat-finanzas .stat-numero{font-size:22px}.cabecera h1{font-size:26px}.stat-numero{font-size:29px}}@media print{body{background:white;color:#222}.panel,.stat{background:white;color:#222}td,td strong,.stat-numero,.panel-titulo h2{color:#222}}
+/* Elementos agregados: cancelación, anulaciones, fotos, autorización y cuenta */
+.badge.cancelada{color:#efb6a0;border-color:#8b6654;border-style:dashed}
+.nota-franja.alerta-franja{border-style:solid;border-color:#8b6654;color:#f3d2bf}
+.nota-franja b{color:var(--cream)}
+.tachado{text-decoration:line-through;opacity:.65}
+tr.anulado td{color:var(--muted)}
+td small,.dato small{display:block;font-size:10px;color:var(--muted);margin-top:4px}
+.total-linea span small{display:block;font-size:10px;color:var(--muted);margin-top:3px}
+.aviso-texto{color:#efb6a0}
+.botones-columna{display:flex;flex-direction:column;gap:9px}
+.boton.ancho{width:100%}
+.panel-titulo .acciones{display:flex;gap:8px;flex-wrap:wrap}
+.fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:10px}
+.foto{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden;text-decoration:none;color:var(--cream);font-size:11px;background:#1a110a}
+.foto img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#2b1b10}
+.foto span{padding:8px 10px;line-height:1.35}
+.foto small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+.campo.casilla{flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px;color:var(--cream)}
+.campo.casilla input{width:auto;padding:0;border:0;outline:0;accent-color:#c9a27c;transform:scale(1.25)}
+.campo.casilla small{flex-basis:100%}
+.persona-cuenta{flex:1;min-width:0;text-align:left;background:none;border:0;padding:4px 6px;border-radius:10px;cursor:pointer;color:inherit;font:inherit}
+.persona-cuenta:hover{background:#2b1b10}
+.persona-cuenta strong{display:block;color:var(--cream);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.persona-cuenta small{display:block;font-size:11px;color:var(--muted)}

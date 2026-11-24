@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>MecaniGest · Impresión</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="assets/imprimir.css">
+  <script src="assets/imprimir.js" defer></script>
+</head>
+<body>
+  <div class="barra-impresion">
+    <span id="estado-impresion">Preparando documento…</span>
+    <button type="button" id="imprimir">Imprimir o guardar PDF</button>
+  </div>
+  <main id="documento" class="documento"></main>
+</body>
+</html>
