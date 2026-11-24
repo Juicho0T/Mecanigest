@@ -18,6 +18,9 @@ const estadoBadge=e=>`<span class="badge s${estados.indexOf(e)}">${nombresEstado
 const pagoBadge=o=>`<span class="badge ${o.estado_pago==='PAGADO'?'pago':o.estado_pago==='PARCIAL'?'parcial':'deuda'}">${{PAGADO:'Pagado',PARCIAL:'Pago parcial',PENDIENTE:'Pendiente', 'SIN CARGO':'Sin cargo'}[o.estado_pago]}</span>`;
 const vacio=(t='Todavía no hay registros para mostrar.')=>`<div class="vacio">${ico('ordenes')}${esc(t)}</div>`;
 const boton=(texto,accion,extra='',clase='')=>`<button class="boton ${clase}" data-accion="${accion}" ${extra}>${esc(texto)}</button>`;
+// Clave única por formulario para evitar operaciones duplicadas. crypto.randomUUID solo existe en
+// contextos seguros (localhost o HTTPS); getRandomValues también funciona al entrar por la IP de la red local.
+function claveOperacion(){if(typeof crypto.randomUUID==='function')return crypto.randomUUID();const b=crypto.getRandomValues(new Uint8Array(16));return Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');}
 async function api(r,d=null){
  const res=await fetch(`api.php?r=${r}`,{method:d?'POST':'GET',credentials:'same-origin',headers:d?{'Content-Type':'application/json','X-CSRF-Token':csrf}:{},body:d?JSON.stringify(d):undefined});
  let valor;try{valor=await res.json();}catch{throw new Error('No se pudo leer la respuesta. Verifica que el servicio esté disponible.');}
@@ -86,7 +89,7 @@ function campo(c){const v=c.valor??'',atrib=`name="${c.nombre}" ${c.requerido===
 function formulario(titulo,campos,enviar,opciones={}){
  if(modal.open)modal.close();
  modal.innerHTML=`<form id="formulario"><header class="modal-head"><h2 id="modal-titulo">${esc(titulo)}</h2><button type="button" class="boton-icono" data-accion="cerrar" aria-label="Cerrar">${ico('cerrar')}</button></header><div class="modal-body">${opciones.descripcion?`<p class="nota">${esc(opciones.descripcion)}</p>`:''}<div class="error-form" role="alert"></div><div class="form-grid">${campos.map(campo).join('')}</div></div><footer class="modal-pie"><button class="boton" type="button" data-accion="cerrar">Cancelar</button><button type="submit" class="boton primario">${esc(opciones.boton||'Guardar')}</button></footer></form>`;
- const operacion=crypto.randomUUID();modal.showModal();
+ const operacion=claveOperacion();modal.showModal();
  $('#formulario').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget;if(f.dataset.busy)return;f.dataset.busy='1';const b=$('button[type=submit]',f);b.disabled=true;$('.error-form',f).textContent='';try{await enviar({...Object.fromEntries(new FormData(f)),operacion});if(opciones.continuacion)return;modal.close();avisar(opciones.exito||'Información guardada correctamente.');await cargar();}catch(err){$('.error-form',f).textContent=err.message;}finally{delete f.dataset.busy;b.disabled=false;}};
 }
 function editarRegistro(id=0){
