@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+storage/*
+!storage/.gitkeep
+tmp/
+node_modules/
+output/
+/MecaniGest
+/indicaciones.png
+*.log
+*.sql.gz
+*.bak
+.DS_Store
+Thumbs.db
