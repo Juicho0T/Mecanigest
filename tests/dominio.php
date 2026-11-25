@@ -167,6 +167,21 @@ try {
     verifica($id3 > $id2, 'Tras cancelar se puede abrir una nueva orden del vehículo');
     $t->cancelar($a, $id3, ['motivo' => 'Prueba']);
 
+    // ---------- Recibir vehículo en un solo paso
+    $clientesAntes = (int)$t->uno('SELECT COUNT(*) n FROM clientes')['n'];
+    rechaza(fn() => $t->recibirVehiculo($r, ['cliente' => ['nombre' => 'Nuevo', 'telefono' => '6181112233'], 'vehiculo' => ['marca' => 'Kia', 'modelo' => 'Rio', 'anio' => 2021, 'placas' => 'NVO-001'], 'mecanico_id' => $m['id'], 'falla' => '']), 'Recibir sin falla no guarda nada');
+    verifica((int)$t->uno('SELECT COUNT(*) n FROM clientes')['n'] === $clientesAntes && !$t->filas("SELECT id FROM vehiculos WHERE placas='NVO-001'"), 'El error no deja cliente ni vehículo a medias');
+    rechaza(fn() => $t->recibirVehiculo($m, ['vehiculo_id' => $vid2, 'mecanico_id' => $m['id'], 'falla' => 'X']), 'Mecánico no recibe vehículos');
+    $idNuevo = $t->recibirVehiculo($r, ['cliente' => ['nombre' => 'Cliente nuevo', 'telefono' => '6181112233'], 'vehiculo' => ['marca' => 'Kia', 'modelo' => 'Rio', 'anio' => 2021, 'placas' => 'nvo-001'], 'mecanico_id' => $m['id'], 'falla' => 'No enciende', 'kilometraje' => '1200']);
+    $on = $t->detalle($a, $idNuevo);
+    verifica($on['cliente'] === 'Cliente nuevo' && $on['placas'] === 'NVO-001' && $on['kilometraje'] == 1200, 'Recibir con cliente y vehículo nuevos en un paso');
+    $idMismoCliente = $t->recibirVehiculo($r, ['cliente_id' => $on['cliente_id'], 'vehiculo' => ['marca' => 'Ford', 'modelo' => 'Ka', 'anio' => 2015, 'placas' => 'NVO-002'], 'mecanico_id' => $m['id'], 'falla' => 'Frenos']);
+    verifica($t->detalle($a, $idMismoCliente)['cliente_id'] === $on['cliente_id'], 'Recibir un vehículo nuevo de un cliente registrado');
+    rechaza(fn() => $t->recibirVehiculo($r, ['vehiculo_id' => $on['vehiculo_id'], 'mecanico_id' => $m['id'], 'falla' => 'Otra']), 'Un vehículo registrado con orden activa no se recibe dos veces', 'orden activa');
+    $t->cancelar($r, $idNuevo, ['motivo' => 'Prueba']);
+    $t->cancelar($r, $idMismoCliente, ['motivo' => 'Prueba']);
+    verifica($t->recibirVehiculo($r, ['vehiculo_id' => $on['vehiculo_id'], 'mecanico_id' => $m['id'], 'falla' => 'Regresa']) > 0, 'Recibir un vehículo ya registrado');
+
     // ---------- Fotos (validación de archivo; la subida real se prueba por HTTP)
     rechaza(fn() => $t->guardarFoto($r, $id, ['error' => UPLOAD_ERR_NO_FILE], ''), 'Rechazar foto no recibida');
     rechaza(fn() => $t->foto($otro, 999999), 'Foto inexistente');
@@ -180,13 +195,13 @@ try {
     // ---------- Historial, permisos y reportes
     rechaza(fn() => $t->activar($a, 'ordenes', ['id' => $id, 'activo' => 0]), 'No eliminar orden con historial');
     $t->activar($a, 'clientes', ['id' => $cid, 'activo' => 0]);
-    verifica(count($t->listadoOrdenes($a)) === 3, 'Inactivar cliente conserva historial');
+    verifica(count(array_filter($t->listadoOrdenes($a), fn($o) => $o['cliente_id'] == $cid)) === 3, 'Inactivar cliente conserva historial');
     rechaza(fn() => $t->activar($a, 'usuarios', ['id' => $a['id'], 'activo' => 0]), 'Proteger al administrador actual');
     rechaza(fn() => $t->guardar($r, 'usuarios', ['nombre' => 'Intruso']), 'Recepción no administra usuarios');
     rechaza(fn() => $t->reportes($m, date('Y-m-d'), date('Y-m-d')), 'Reportes restringidos al administrador');
     $rep = $t->reportes($a, date('Y-m-d'), date('Y-m-d'));
     verifica($rep['ingresos_centavos'] === 267800, 'Ingresos excluyen el pago anulado ($2,678.00)');
-    verifica(count($rep['pagos_anulados']) === 1 && count($rep['servicios']) === 1 && count($rep['canceladas']) === 2, 'Reporte de anulados, entregas y cancelaciones');
+    verifica(count($rep['pagos_anulados']) === 1 && count($rep['servicios']) === 1 && count($rep['canceladas']) === 4, 'Reporte de anulados, entregas y cancelaciones');
     verifica($rep['refacciones_venta_centavos'] - $rep['refacciones_costo_centavos'] === 20000, 'Utilidad en refacciones $200.00');
     verifica($rep['descuentos_centavos'] === 10000 && $rep['iva_centavos'] === 32800, 'Reporte de descuentos e IVA');
     verifica(count($rep['servicios_vendidos']) === 2, 'Reporte de servicios vendidos');

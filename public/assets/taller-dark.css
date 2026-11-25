@@ -43,3 +43,58 @@ td small,.dato small{display:block;font-size:10px;color:var(--muted);margin-top:
 .persona-cuenta:hover{background:#2b1b10}
 .persona-cuenta strong{display:block;color:var(--cream);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .persona-cuenta small{display:block;font-size:11px;color:var(--muted)}
+/* Guía de uso: siguiente paso, pendientes, cómo funciona y recibir vehículo */
+.siguiente-paso{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 24px;border:1px solid #c9a27c;border-radius:16px;padding:20px 22px;margin-bottom:22px;background:linear-gradient(135deg,#3a2414,#22150c)}
+.siguiente-paso.en-espera{border-style:dashed;border-color:var(--line);background:transparent}
+.sp-texto{flex:1 1 320px;min-width:0}
+.sp-texto .eyebrow{display:block;margin-bottom:6px;color:#e3c29d}
+.siguiente-paso.en-espera .eyebrow{color:var(--muted)}
+.sp-texto h2{margin:0 0 6px;font-size:19px;line-height:1.25;text-transform:none;letter-spacing:0;color:var(--cream);text-wrap:balance}
+.sp-texto p{margin:0;color:#e8d3bd;font-size:13px;line-height:1.5}
+.sp-texto strong{color:var(--cream)}
+.sp-botones{display:flex;flex-wrap:wrap;gap:8px}
+.pendientes .panel-cuerpo{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.grupo-pendiente{min-width:0}
+.grupo-titulo{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--cream);font-size:13px}
+.grupo-pendiente>small{display:block;color:var(--muted);font-size:11px;margin:3px 0 4px}
+.fila-boton{width:100%;background:none;border:0;border-bottom:1px solid var(--line);text-align:left;color:var(--cream);cursor:pointer;align-items:center;padding:12px 4px;border-radius:0}
+.fila-boton:hover,.fila-boton:focus-visible{background:#2b1b10}
+.fila-boton svg{width:16px;height:16px;flex:none}
+.fila-boton strong{font-weight:600}
+.como-funciona{padding:0}
+.como-funciona summary{cursor:pointer;padding:16px 20px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--cream);list-style:none}
+.como-funciona summary::-webkit-details-marker{display:none}
+.como-funciona summary svg{width:18px;height:18px}
+.como-funciona summary::after{content:'Mostrar';margin-left:auto;font-size:11px;color:var(--muted)}
+.como-funciona[open] summary::after{content:'Ocultar'}
+.como-funciona ol{list-style:none;margin:0;padding:0 20px 6px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;counter-reset:paso}
+.como-funciona li{counter-increment:paso;border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.como-funciona li::before{content:counter(paso);width:24px;height:24px;border-radius:50%;background:var(--surface);color:var(--cream);display:grid;place-items:center;font-size:12px;font-weight:600}
+.como-funciona .quien{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#e3c29d}
+.como-funciona strong{color:var(--cream);font-size:13px}
+.como-funciona li small{color:var(--muted);font-size:11px;line-height:1.4}
+.como-funciona>.nota{padding:4px 20px 16px;margin:0}
+#modal:has(.recibir){width:min(680px,calc(100vw - 24px))}
+.recibir .modal-body{display:flex;flex-direction:column;gap:22px}
+.paso-form h3{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:15px;color:var(--cream);text-transform:none;letter-spacing:0}
+.paso-form h3 span{width:26px;height:26px;border-radius:50%;background:#c9a27c;color:#1a0f07;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
+.resultados{display:flex;flex-direction:column;gap:6px;margin:-6px 0 12px}
+.resultados button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--surface);border:1px solid #6c5f51;border-radius:12px;padding:11px 14px;color:var(--cream);cursor:pointer}
+.resultados button:hover,.resultados button:focus-visible{border-color:var(--cream)}
+.resultados button:disabled{opacity:.55;cursor:not-allowed}
+.resultados small,.elegido small{font-size:11px;color:var(--muted)}
+.elegido{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #c9a27c;border-radius:12px;padding:12px 14px;color:var(--cream)}
+.elegido>div{min-width:0}
+.elegido strong{display:block;margin-bottom:3px}
+.sub-bloque{margin-bottom:14px}
+.sub-bloque h4{margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.chips{border:0;padding:0;margin-left:0;margin-right:0}
+.chips legend{padding:0;margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips legend{flex-basis:100%}
+.chips label{position:relative}
+.chips input{position:absolute;opacity:0;width:1px;height:1px}
+.chips span{display:inline-block;border:1px solid #6c5f51;border-radius:30px;padding:8px 14px;color:var(--cream);font-size:12px;cursor:pointer}
+.chips input:checked+span{background:#c9a27c;border-color:#c9a27c;color:#1a0f07;font-weight:600}
+.chips input:focus-visible+span{outline:2px solid var(--cream);outline-offset:2px}
+@media(max-width:520px){.siguiente-paso{padding:16px}.sp-botones .boton{flex:1 1 auto}}

@@ -57,8 +57,10 @@ final class Taller
         $this->ejecutar('INSERT INTO auditoria(usuario_id,entidad,registro_id,accion) VALUES(?,?,?,?)', [$u['id'], $entidad, $id, mb_substr($accion, 0, 250)]);
     }
 
+    /** Ejecuta en una transacción. Si ya hay una abierta, la operación forma parte de ella. */
     function transaccion(callable $accion)
     {
+        if ($this->db->inTransaction()) return $accion();
         $this->db->beginTransaction();
         try {
             $r = $accion();
@@ -424,6 +426,30 @@ final class Taller
             $id = (int)$this->db->lastInsertId();
             $this->auditoria($u, 'orden', $id, 'Vehículo recibido y orden abierta' . ($r['kilometraje'] !== null ? ' · ' . number_format($r['kilometraje']) . ' km' : ''));
             return $id;
+        });
+    }
+
+    /**
+     * Recibir un vehículo en un solo paso: usa el vehículo existente o registra cliente
+     * y vehículo nuevos, y abre la orden. Si algo falla no se guarda nada.
+     * $d: vehiculo_id | (cliente_id | cliente{nombre,telefono,correo}) + vehiculo{marca,modelo,anio,placas,vin}
+     */
+    function recibirVehiculo(array $u, array $d): int
+    {
+        rol($u, ['administrador', 'recepcionista']);
+        return $this->transaccion(function () use ($u, $d) {
+            $vehiculoId = empty($d['vehiculo_id']) ? 0 : entero($d['vehiculo_id']);
+            if (!$vehiculoId) {
+                $clienteId = empty($d['cliente_id']) ? 0 : entero($d['cliente_id']);
+                if (!$clienteId) {
+                    if (!is_array($d['cliente'] ?? null)) throw new Regla('Indica el cliente: elige uno registrado o captura sus datos.');
+                    $clienteId = $this->guardar($u, 'clientes', array_intersect_key($d['cliente'], array_flip(['nombre', 'telefono', 'correo', 'direccion'])));
+                }
+                if (!is_array($d['vehiculo'] ?? null)) throw new Regla('Indica los datos del vehículo.');
+                $vehiculo = array_intersect_key($d['vehiculo'], array_flip(['marca', 'modelo', 'anio', 'placas', 'vin']));
+                $vehiculoId = $this->guardar($u, 'vehiculos', ['cliente_id' => $clienteId] + $vehiculo);
+            }
+            return $this->crearOrden($u, ['vehiculo_id' => $vehiculoId] + $d);
         });
     }
 

@@ -67,6 +67,7 @@ try {
                             session_regenerate_id(true);
                             break;
                         case 'orden/crear': $respuesta['id'] = $t->crearOrden($u, $d); break;
+                        case 'orden/recibir': $respuesta['id'] = $t->recibirVehiculo($u, $d); break;
                         case 'orden/recepcion': $t->recepcion($u, $id(), $d); break;
                         case 'orden/tecnica': $t->tecnica($u, $id(), $d); break;
                         case 'orden/autorizar': $t->autorizar($u, $id(), $d); break;

@@ -1,10 +1,22 @@
 # Guía de uso
 
+## Lo básico
+
+- **Inicio → «Lo que sigue»**: cada perfil ve las órdenes donde le toca hacer algo, agrupadas por tarea. Toca un vehículo para abrirlo.
+- **En cada orden, el recuadro «Siguiente paso»** dice qué hacer y tiene el botón exacto. Si le toca a otra persona, dice qué se está esperando.
+- **«Cómo funciona una orden»**, en el inicio, resume los cinco pasos y quién hace cada uno. Puedes ocultarlo.
+
+
 ## Recepción
 
 En Clientes busca por nombre o teléfono. Para registrar un cliente bastan el nombre y el teléfono; correo y dirección son opcionales. En Vehículos selecciona al propietario y registra marca, modelo, año y placas, y el número de serie (VIN) si lo tienes a la mano. Las placas y el VIN son únicos. Un vehículo tiene un propietario actual; las órdenes anteriores conservan al cliente que las abrió. La lista de vehículos muestra el último kilometraje registrado.
 
-Desde Nueva orden selecciona el vehículo, el mecánico y la falla que describe el cliente. Registra también:
+Cuando llega un vehículo, usa **Recibir vehículo** (en el inicio o en Órdenes). Todo se hace en un solo formulario:
+
+1. **¿Qué vehículo llega?** Escribe parte de las placas, del nombre o del teléfono del cliente y tócalo en la lista. Si es la primera vez que viene, toca «Es la primera vez que viene este vehículo»: busca al dueño o captúralo como cliente nuevo (nombre y teléfono), y anota placas, marca, modelo y año.
+2. **¿Qué le pasa y cómo llega?** Lo que dice el cliente, el mecánico que lo revisará y, si puedes, el kilometraje, la gasolina y el estado en que viene.
+
+Si falta algo, el formulario dice exactamente qué. Cliente, vehículo y orden se guardan juntos: si algo falla, no queda nada a medias. Clientes y Vehículos siguen disponibles para consultar o corregir datos. En el formulario también registras:
 
 - **Kilometraje** del tablero. La lista de vehículos te muestra el último registrado, para detectar errores de captura.
 - **Nivel de combustible.**
@@ -26,7 +38,7 @@ Si el cliente no autoriza, usa **Cancelar orden** e indica el motivo. Los cargos
 
 ## Mecánico
 
-Al ingresar verás tus órdenes. Abre una y avanza a En diagnóstico. **Editar trabajo** permite escribir el diagnóstico, el presupuesto estimado con su detalle, la mano de obra adicional y las reparaciones realizadas. Con **Agregar servicio** sumas trabajos del catálogo con precio fijo, por ejemplo una afinación o un cambio de aceite. Puedes quitarlos mientras la orden no esté terminada.
+Al ingresar verás en «Lo que sigue» los vehículos por revisar, los ya autorizados y los que estás reparando. En la orden, el siguiente paso te guía: **Registrar diagnóstico** (qué encontraste y cuánto costaría), **Iniciar reparación** cuando el cliente autoriza y **Terminé el trabajo** (qué hiciste y mano de obra) al final. Para corregir algo después, **Corregir** permite escribir el diagnóstico, el presupuesto estimado con su detalle, la mano de obra adicional y las reparaciones realizadas. Con **Agregar servicio** sumas trabajos del catálogo con precio fijo, por ejemplo una afinación o un cambio de aceite. Puedes quitarlos mientras la orden no esté terminada.
 
 El diagnóstico y la autorización del cliente son obligatorios para avanzar a En reparación. Durante la reparación podrás usar piezas del catálogo activo. El formulario muestra existencias y precio; al confirmar, la operación descuenta unidades y conserva el precio en el detalle.
 

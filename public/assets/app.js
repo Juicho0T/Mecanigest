@@ -179,26 +179,56 @@ function avisoRespaldo() {
   return `<div class="nota-franja alerta-franja">${ico('alerta')} ${ultimo ? `El último respaldo de la base es del ${fecha(ultimo)}.` : 'Todavía no hay respaldos de la base de datos.'} Ejecuta <b>respaldar.ps1</b> o prográmalo para que se haga diario.</div>`;
 }
 
+/** Qué le toca a cada perfil ahora mismo, agrupado por tarea. */
+function pendientes() {
+  const act = datos.ordenes.filter(activa);
+  const excede = o => o.autorizado_centavos != null && o.total_centavos > Number(o.autorizado_centavos);
+  const grupos = [];
+  if (admin() || mecanico()) grupos.push(
+    ['Por revisar', 'Registra qué tiene y cuánto costaría', act.filter(o => o.estado === estados[0] || (o.estado === estados[1] && !o.diagnostico))],
+    ['Ya autorizados: a reparar', 'El cliente aceptó el presupuesto', act.filter(o => o.estado === estados[1] && o.autorizado_en)],
+    ['En reparación', 'Agrega piezas y marca cuando termines', act.filter(o => o.estado === estados[2] && !excede(o))],
+  );
+  if (admin() || !mecanico()) grupos.push(
+    ['Pedir autorización al cliente', 'Llama o escribe al cliente con el presupuesto', act.filter(o => (o.estado === estados[1] && o.diagnostico && !o.autorizado_en) || (o.estado === estados[2] && excede(o)))],
+    ['Listos para entregar', 'Avisa al cliente, cobra y entrega', act.filter(o => o.estado === estados[3])],
+    ['Cobros pendientes', 'Vehículos entregados que deben dinero', datos.ordenes.filter(o => !activa(o) && o.saldo_centavos > 0)],
+  );
+  const con = grupos.filter(g => g[2].length);
+  return `<section class="panel pendientes"><div class="panel-titulo"><div><h2>Lo que sigue</h2><small>Toca un vehículo para ver qué hacer</small></div></div><div class="panel-cuerpo">${con.length
+    ? con.map(([t, ayuda, lista]) => `<div class="grupo-pendiente"><div class="grupo-titulo"><strong>${t}</strong><span class="badge">${lista.length}</span></div><small>${ayuda}</small>${lista.slice(0, 4).map(filaAviso).join('')}${lista.length > 4 ? `<p class="nota">y ${lista.length - 4} más en Órdenes.</p>` : ''}</div>`).join('')
+    : `<p class="nota">No hay nada pendiente por ahora.${!mecanico() ? ' Cuando llegue un vehículo, usa «Recibir vehículo».' : ''}</p>`}</div></section>`;
+}
+
+function comoFunciona() {
+  let oculto = false;
+  try { oculto = localStorage.getItem('mecanigest-guia-oculta') === '1'; } catch { }
+  const pasos = [
+    ['Recepción', 'Recibe el vehículo', 'Busca por placas o registra al cliente ahí mismo. Toma fotos e imprime la hoja para firma.'],
+    ['Mecánico', 'Revisa y presupuesta', 'Anota qué encontró y cuánto costaría.'],
+    ['Recepción', 'Pide autorización', 'Comunica el presupuesto y registra si el cliente acepta.'],
+    ['Mecánico', 'Repara', 'Agrega piezas y servicios, y marca cuando termina.'],
+    ['Recepción', 'Cobra y entrega', 'Registra el pago y entrega con su recibo.'],
+  ];
+  return `<details class="panel como-funciona" ${oculto ? '' : 'open'}><summary>${ico('ordenes')} Cómo funciona una orden</summary><ol>${pasos.map(([quien, t, d]) => `<li><span class="quien">${quien}</span><strong>${t}</strong><small>${d}</small></li>`).join('')}</ol><p class="nota">En cada orden, el recuadro «Siguiente paso» te dice qué hacer.</p></details>`;
+}
+
 function dashboard() {
   const activas = datos.ordenes.filter(activa), listas = activas.filter(o => o.estado === estados[3]);
   const saldo = datos.ordenes.reduce((a, o) => a + o.saldo_centavos, 0);
   const bajo = datos.refacciones.filter(r => r.activo == 1 && r.existencia <= 3);
-  const hoy = datos.pagos.filter(p => !p.anulado_en && p.creado_en.startsWith(datos.hoy)).reduce((a, p) => a + Number(p.monto_centavos), 0);
-  const sinAutorizar = activas.filter(o => o.estado === estados[1] && !o.autorizado_en);
-  return cabecera(mecanico() ? 'Mi jornada de trabajo' : 'Resumen general', mecanico() ? 'Consulta tus vehículos asignados y continúa con las reparaciones.' : 'Todo lo que necesitas saber de tu taller, en un vistazo.', !mecanico() ? `<button class="boton primario" data-accion="nueva-orden">${ico('mas')} Nueva orden de servicio</button>` : '')
+  return cabecera(mecanico() ? 'Mi jornada de trabajo' : 'Resumen general', mecanico() ? 'Tus vehículos asignados y lo que sigue en cada uno.' : 'Lo que sigue en el taller y cómo va el día.', !mecanico() ? `<button class="boton primario" data-accion="nueva-orden">${ico('mas')} Recibir vehículo</button>` : '')
     + avisoRespaldo()
     + (datos.demo ? `<div class="nota-franja">${ico('alerta')} Entorno de demostración · Los clientes y operaciones de ejemplo son ficticios.</div>` : '')
+    + pendientes()
     + `<div class="stats">${stat('Órdenes activas', activas.length, 'Servicios que siguen en proceso', 'ordenes')}${stat('Vehículos en el taller', new Set(activas.map(o => o.vehiculo_id)).size, 'Registrados y aún sin entregar', 'vehiculos')}${stat('Listos para entregar', listas.length, 'Trabajos terminados', 'check')}${mecanico() ? stat('En reparación', activas.filter(o => o.estado === estados[2]).length, 'Órdenes asignadas a ti', 'llave') : stat('Saldo por cobrar', dinero(saldo), 'Pendiente de todas las órdenes', 'pagos', true)}</div>
-  <div class="rejilla-dashboard"><div><section class="panel"><div class="panel-titulo"><div><h2>${mecanico() ? 'Mis órdenes activas' : 'Órdenes en el taller'}</h2><small>Seguimiento de los servicios en curso</small></div><button class="boton ligero" data-vista="ordenes">Ver todas ${ico('flecha')}</button></div>${tablaOrdenes(activas.slice(0, 5), true)}<div class="paginacion">${activas.length} órdenes activas · Información actualizada</div></section>
-  <div class="panel-doble"><section class="panel"><div class="panel-titulo"><h2>${mecanico() ? 'Próximas entregas' : 'Esperan autorización'}</h2>${ico(mecanico() ? 'vehiculos' : 'firma')}</div><div class="panel-cuerpo">${mecanico()
-      ? (listas.length ? listas.slice(0, 3).map(filaAviso).join('') : '<p class="nota">Los vehículos terminados aparecerán aquí.</p>')
-      : (sinAutorizar.length ? sinAutorizar.slice(0, 3).map(filaAviso).join('') : '<p class="nota">No hay diagnósticos esperando la autorización del cliente.</p>')}</div></section>
-  <section class="panel"><div class="panel-titulo"><h2>${mecanico() ? 'Tu siguiente paso' : 'Ingresos de hoy'}</h2>${ico(mecanico() ? 'llave' : 'pagos')}</div><div class="panel-cuerpo">${mecanico() ? '<p class="nota">Abre una orden asignada para registrar el diagnóstico y actualizar el avance de la reparación.</p>' : `<div class="stat-numero">${dinero(hoy)}</div><p class="nota">Solo pagos registrados hoy. Los saldos pendientes no se cuentan como ingresos.</p>`}</div></section></div></div>
+  ${comoFunciona()}
+  <div class="rejilla-dashboard"><div><section class="panel"><div class="panel-titulo"><div><h2>${mecanico() ? 'Mis órdenes activas' : 'Órdenes en el taller'}</h2><small>Todos los servicios en curso</small></div><button class="boton ligero" data-vista="ordenes">Ver todas ${ico('flecha')}</button></div>${tablaOrdenes(activas.slice(0, 5), true)}<div class="paginacion">${activas.length} órdenes activas · Información actualizada</div></section></div>
   <aside class="dashboard-lateral"><section class="panel"><div class="panel-titulo"><h2>Estado de los servicios</h2></div><div class="panel-cuerpo">${estados.slice(0, 4).map((e, i) => { const n = activas.filter(o => o.estado === e).length; return `<div class="fila-etapas"><span>${nombresEstado[i]}</span><b>${n}</b></div><progress class="barra" value="${n}" max="${Math.max(activas.length, 1)}" aria-label="${nombresEstado[i]}"></progress>`; }).join('')}<div class="resumen-inferior">${ico('escudo')}Cada vehículo tiene su propio historial de servicio.</div></div></section>
   <section class="panel"><div class="panel-titulo"><h2>Existencias bajas</h2><span class="badge parcial">${bajo.length}</span></div><div class="panel-cuerpo">${bajo.length ? bajo.slice(0, 4).map(r => `<div class="fila-aviso"><div>${esc(r.nombre)}<small>${esc(r.proveedor) || 'Sin proveedor'}</small></div><strong>${r.existencia} pzas.</strong></div>`).join('') : '<p class="nota">No hay refacciones activas con tres unidades o menos.</p>'}<button class="boton ligero" data-vista="inventario">Consultar inventario ${ico('flecha')}</button></div></section></aside></div>`;
 }
 
-const filaAviso = o => `<div class="fila-aviso"><div><strong>${esc(o.marca)} ${esc(o.modelo)}</strong><small>${esc(o.cliente)} · ${folio(o.id)}</small></div><button class="boton ligero" data-accion="orden" data-id="${o.id}">Ver orden</button></div>`;
+const filaAviso = o => `<button class="fila-aviso fila-boton" data-accion="orden" data-id="${o.id}"><div><strong>${esc(o.marca)} ${esc(o.modelo)} · ${esc(o.placas)}</strong><small>${esc(o.cliente)} · ${folio(o.id)}${o.saldo_centavos > 0 && !mecanico() ? ' · debe ' + dinero(o.saldo_centavos) : ''}</small></div>${ico('flecha')}</button>`;
 
 // ====================================================================== Listados
 function herramientas(opciones = []) {
@@ -256,6 +286,7 @@ async function renderVista() {
   if (!main) return;
   if (vista === 'inicio') {
     main.innerHTML = dashboard();
+    $('.como-funciona', main)?.addEventListener('toggle', e => { try { localStorage.setItem('mecanigest-guia-oculta', e.target.open ? '0' : '1'); } catch { } });
   } else if (vista === 'orden') {
     await mostrarOrden(ordenActual);
     return;
@@ -266,7 +297,7 @@ async function renderVista() {
     const titulos = {
       clientes: ['Clientes', 'Personas que confían sus vehículos a tu taller.', 'Nuevo cliente'],
       vehiculos: ['Vehículos', 'Información de cada vehículo, su kilometraje y su historial de servicios.', 'Nuevo vehículo'],
-      ordenes: [mecanico() ? 'Mis órdenes de servicio' : 'Órdenes de servicio', 'Del ingreso a la entrega, cada servicio tiene seguimiento.', 'Nueva orden'],
+      ordenes: [mecanico() ? 'Mis órdenes de servicio' : 'Órdenes de servicio', 'Del ingreso a la entrega, cada servicio tiene seguimiento.', 'Recibir vehículo'],
       servicios: ['Catálogo de servicios', 'Trabajos con precio fijo que se agregan a las órdenes.', 'Nuevo servicio'],
       inventario: ['Inventario de refacciones', 'Consulta las piezas disponibles, sus costos y sus movimientos.', 'Nueva refacción'],
       pagos: ['Pagos registrados', 'Ingresos recibidos, con el detalle de quién y cuándo los registró.', 'Registrar pago'],
@@ -381,18 +412,145 @@ function editarRegistro(id = 0) {
   });
 }
 
-function nuevaOrden() {
-  const vehiculos = datos.vehiculos.filter(v => v.activo == 1 && datos.clientes.some(c => c.id == v.cliente_id && c.activo == 1));
-  formulario('Nueva orden de servicio', [
-    { nombre: 'vehiculo_id', etiqueta: 'Vehículo y propietario', tipo: 'select', completo: true, opciones: vehiculos.map(v => [v.id, `${v.placas} · ${v.marca} ${v.modelo} · ${v.propietario}${v.ultimo_km != null ? ' · último ' + km(v.ultimo_km) : ''}`]) },
-    { nombre: 'mecanico_id', etiqueta: 'Mecánico asignado', tipo: 'select', completo: true, opciones: datos.usuarios.filter(u => u.rol === 'mecanico' && u.activo == 1).map(u => [u.id, u.nombre]) },
-    { nombre: 'falla', etiqueta: 'Falla reportada por el cliente', tipo: 'textarea', max: 4000, completo: true },
-    ...camposRecepcion({}),
-  ], async d => {
-    const r = await api('orden/crear', d);
-    vista = 'orden';
-    ordenActual = r.id;
-  }, { descripcion: 'Registra primero al cliente y su vehículo si todavía no aparecen en el catálogo. Después podrás agregar fotos e imprimir la hoja de recepción.', boton: 'Crear orden' });
+// ====================================================================== Recibir vehículo
+// Un solo formulario para todo el ingreso: busca el vehículo (o registra cliente y vehículo nuevos)
+// y abre la orden. El servidor guarda todo junto o nada.
+const normalizar = t => String(t ?? '').toLocaleLowerCase('es').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[\s-]/g, '');
+
+function recibirVehiculo() {
+  const estado = { vehiculo: null, nuevo: false, cliente: null, clienteNuevo: false };
+  const mecanicos = datos.usuarios.filter(u => u.rol === 'mecanico' && u.activo == 1);
+  const ordenActivaDe = v => datos.ordenes.find(o => o.vehiculo_id == v.id && activa(o));
+  const coincide = (q, ...campos) => campos.some(c => normalizar(c).includes(q));
+
+  if (modal.open) modal.close();
+  modal.innerHTML = `<form id="recibir" class="recibir" novalidate>
+    <header class="modal-head"><h2 id="modal-titulo">Recibir vehículo</h2><button type="button" class="boton-icono" data-accion="cerrar" aria-label="Cerrar">${ico('cerrar')}</button></header>
+    <div class="modal-body"><div class="error-form" role="alert"></div>
+      <section class="paso-form"><h3><span>1</span>¿Qué vehículo llega?</h3><div id="rv-vehiculo"></div></section>
+      <section class="paso-form"><h3><span>2</span>¿Qué le pasa y cómo llega?</h3>
+        <label class="campo completo">Lo que dice el cliente que le pasa *<textarea id="rv-falla" maxlength="4000" placeholder="Ej. Hace ruido al frenar y vibra el volante"></textarea></label>
+        <div class="form-grid">
+          <label class="campo">Mecánico que lo revisará *<select id="rv-mecanico">${mecanicos.length === 1 ? '' : '<option value="">Elige al mecánico</option>'}${mecanicos.map(u => `<option value="${u.id}">${esc(u.nombre)}</option>`).join('')}</select></label>
+          <label class="campo">Kilometraje del tablero<input id="rv-km" type="number" min="0" max="3000000" inputmode="numeric" placeholder="Ej. 85400"><small id="rv-km-ayuda"></small></label>
+        </div>
+        <fieldset class="campo completo chips"><legend>Gasolina</legend>${COMBUSTIBLE.map(n => `<label><input type="radio" name="rv-combustible" value="${n}"><span>${n}</span></label>`).join('')}</fieldset>
+        <label class="campo completo">¿Cómo viene el vehículo? (opcional)<textarea id="rv-notas" maxlength="2000" placeholder="Golpes, rayones, testigos encendidos, objetos de valor…"></textarea></label>
+      </section>
+    </div>
+    <footer class="modal-pie"><button class="boton" type="button" data-accion="cerrar">Cancelar</button><button type="submit" class="boton primario">Recibir vehículo</button></footer></form>`;
+
+  const zona = $('#rv-vehiculo', modal);
+  function pintarVehiculo() {
+    if (estado.vehiculo) {
+      const v = estado.vehiculo;
+      zona.innerHTML = `<div class="elegido"><div><strong>${esc(v.marca)} ${esc(v.modelo)} ${esc(v.anio)} · <span class="placa">${esc(v.placas)}</span></strong><small>${esc(v.propietario)}${v.ultimo_km != null ? ' · última visita con ' + km(v.ultimo_km) : ''}</small></div><button type="button" class="boton chico" id="rv-cambiar">Cambiar</button></div>`;
+      $('#rv-cambiar', zona).onclick = () => { estado.vehiculo = null; pintarVehiculo(); };
+      $('#rv-km-ayuda', modal).textContent = v.ultimo_km != null ? `La última vez tenía ${km(v.ultimo_km)}.` : '';
+      return;
+    }
+    $('#rv-km-ayuda', modal).textContent = '';
+    if (estado.nuevo) return pintarNuevo();
+    zona.innerHTML = `<label class="campo completo">Busca por placas, nombre o teléfono del cliente<input id="rv-busca" autocomplete="off" placeholder="Ej. DGO-241 o Carlos o 618…"></label><div id="rv-resultados" class="resultados"></div>
+      <button type="button" class="boton ligero" id="rv-nuevo">${ico('mas')} Es la primera vez que viene este vehículo</button>`;
+    const pintarResultados = () => {
+      const q = normalizar($('#rv-busca', zona).value);
+      const lista = q.length < 2 ? [] : datos.vehiculos.filter(v => v.activo == 1 && coincide(q, v.placas, v.propietario, v.marca + v.modelo, datos.clientes.find(c => c.id == v.cliente_id)?.telefono)).slice(0, 6);
+      $('#rv-resultados', zona).innerHTML = q.length < 2 ? '<p class="nota">Escribe al menos dos letras o números.</p>'
+        : lista.length ? lista.map(v => { const o = ordenActivaDe(v); return `<button type="button" data-vehiculo="${v.id}" ${o ? 'disabled' : ''}><strong>${esc(v.placas)} · ${esc(v.marca)} ${esc(v.modelo)}</strong><small>${esc(v.propietario)}${o ? ` · ya está en el taller (${folio(o.id)})` : ''}</small></button>`; }).join('')
+          : '<p class="nota">No está registrado. Usa «Es la primera vez que viene este vehículo».</p>';
+    };
+    $('#rv-busca', zona).oninput = pintarResultados;
+    $('#rv-resultados', zona).onclick = e => { const b = e.target.closest('[data-vehiculo]'); if (b) { estado.vehiculo = datos.vehiculos.find(v => v.id == b.dataset.vehiculo); pintarVehiculo(); } };
+    $('#rv-nuevo', zona).onclick = () => { estado.nuevo = true; pintarVehiculo(); };
+    pintarResultados();
+    $('#rv-busca', zona).focus();
+  }
+
+  function pintarNuevo() {
+    const cliente = estado.cliente
+      ? `<div class="elegido"><div><strong>${esc(estado.cliente.nombre)}</strong><small>${esc(estado.cliente.telefono)}</small></div><button type="button" class="boton chico" id="rv-otro-cliente">Cambiar</button></div>`
+      : estado.clienteNuevo
+        ? `<div class="form-grid"><label class="campo">Nombre del cliente *<input id="rv-cnombre" maxlength="120" autocomplete="off"></label><label class="campo">Teléfono *<input id="rv-ctel" type="tel" maxlength="25" inputmode="tel" placeholder="Ej. 618 123 4567"></label></div><button type="button" class="boton ligero" id="rv-buscar-cliente">Buscar un cliente registrado</button>`
+        : `<label class="campo completo">¿De quién es? Busca al cliente por nombre o teléfono<input id="rv-cbusca" autocomplete="off" placeholder="Ej. Ana o 618…"></label><div id="rv-cresultados" class="resultados"></div><button type="button" class="boton ligero" id="rv-cliente-nuevo">${ico('mas')} Es un cliente nuevo</button>`;
+    zona.innerHTML = `<div class="sub-bloque"><h4>Dueño del vehículo</h4>${cliente}</div>
+      <div class="sub-bloque"><h4>Datos del vehículo</h4><div class="form-grid">
+        <label class="campo">Placas *<input id="rv-placas" maxlength="20" autocomplete="off" placeholder="Ej. DGO-123-A"></label>
+        <label class="campo">Marca *<input id="rv-marca" maxlength="60" placeholder="Ej. Nissan"></label>
+        <label class="campo">Modelo *<input id="rv-modelo" maxlength="80" placeholder="Ej. Versa"></label>
+        <label class="campo">Año *<input id="rv-anio" type="number" inputmode="numeric" min="1900" max="${new Date().getFullYear() + 1}" placeholder="Ej. 2019"></label>
+        <label class="campo completo">Número de serie (VIN), opcional<input id="rv-vin" maxlength="17" autocomplete="off"><small>17 caracteres. Está en la tarjeta de circulación.</small></label>
+      </div></div>
+      <button type="button" class="boton ligero" id="rv-volver">Volver a buscar un vehículo registrado</button>`;
+    $('#rv-volver', zona).onclick = () => { estado.nuevo = false; estado.cliente = null; estado.clienteNuevo = false; pintarVehiculo(); };
+    if (estado.cliente) $('#rv-otro-cliente', zona).onclick = () => { estado.cliente = null; pintarNuevoConservando(); };
+    else if (estado.clienteNuevo) $('#rv-buscar-cliente', zona).onclick = () => { estado.clienteNuevo = false; pintarNuevoConservando(); };
+    else {
+      const pintar = () => {
+        const q = normalizar($('#rv-cbusca', zona).value);
+        const lista = q.length < 2 ? [] : datos.clientes.filter(c => c.activo == 1 && coincide(q, c.nombre, c.telefono)).slice(0, 6);
+        $('#rv-cresultados', zona).innerHTML = q.length < 2 ? '' : lista.length ? lista.map(c => `<button type="button" data-cliente="${c.id}"><strong>${esc(c.nombre)}</strong><small>${esc(c.telefono)}</small></button>`).join('') : '<p class="nota">No está registrado. Usa «Es un cliente nuevo».</p>';
+      };
+      $('#rv-cbusca', zona).oninput = pintar;
+      $('#rv-cresultados', zona).onclick = e => { const b = e.target.closest('[data-cliente]'); if (b) { estado.cliente = datos.clientes.find(c => c.id == b.dataset.cliente); pintarNuevoConservando(); } };
+      $('#rv-cliente-nuevo', zona).onclick = () => {
+        const escrito = $('#rv-cbusca', zona).value.trim();
+        estado.clienteNuevo = true;
+        pintarNuevoConservando();
+        if (/^[+\d\s()-]+$/.test(escrito)) $('#rv-ctel', zona).value = escrito; else $('#rv-cnombre', zona).value = escrito;
+      };
+    }
+  }
+  // Al cambiar la parte del cliente se conservan los datos del vehículo ya escritos.
+  function pintarNuevoConservando() {
+    const ids = ['rv-placas', 'rv-marca', 'rv-modelo', 'rv-anio', 'rv-vin'];
+    const previos = Object.fromEntries(ids.map(i => [i, $('#' + i, zona)?.value ?? '']));
+    pintarNuevo();
+    ids.forEach(i => { if ($('#' + i, zona)) $('#' + i, zona).value = previos[i]; });
+  }
+
+  pintarVehiculo();
+  modal.showModal();
+  const operacion = claveOperacion();
+  $('#recibir').onsubmit = async e => {
+    e.preventDefault();
+    const f = e.currentTarget, b = $('button[type=submit]', f), error = $('.error-form', f);
+    const valor = id => ($('#' + id, f)?.value ?? '').trim();
+    const falla = valor('rv-falla');
+    const faltan = [];
+    if (!estado.vehiculo && !estado.nuevo) faltan.push('busca y elige el vehículo, o indica que es la primera vez que viene');
+    if (estado.nuevo && !estado.cliente && !(estado.clienteNuevo && valor('rv-cnombre') && valor('rv-ctel'))) faltan.push('elige al dueño o captura su nombre y teléfono');
+    if (estado.nuevo && !(valor('rv-placas') && valor('rv-marca') && valor('rv-modelo') && valor('rv-anio'))) faltan.push('completa placas, marca, modelo y año');
+    if (!falla) faltan.push('escribe lo que le pasa al vehículo');
+    if (!valor('rv-mecanico')) faltan.push('elige al mecánico');
+    if (faltan.length) { error.textContent = 'Falta: ' + faltan.join('; ') + '.'; error.scrollIntoView({ block: 'nearest' }); return; }
+
+    const envio = {
+      operacion, falla, mecanico_id: valor('rv-mecanico'), kilometraje: valor('rv-km'), notas_recepcion: valor('rv-notas'),
+      nivel_combustible: f.querySelector('[name=rv-combustible]:checked')?.value || '',
+    };
+    if (estado.vehiculo) envio.vehiculo_id = estado.vehiculo.id;
+    else {
+      if (estado.cliente) envio.cliente_id = estado.cliente.id;
+      else envio.cliente = { nombre: valor('rv-cnombre'), telefono: valor('rv-ctel') };
+      envio.vehiculo = { placas: valor('rv-placas'), marca: valor('rv-marca'), modelo: valor('rv-modelo'), anio: valor('rv-anio'), vin: valor('rv-vin') };
+    }
+    b.disabled = true;
+    error.textContent = '';
+    try {
+      const r = await api('orden/recibir', envio);
+      vista = 'orden';
+      ordenActual = r.id;
+      modal.close();
+      avisar('Vehículo recibido. Agrega fotos e imprime la hoja de recepción para que el cliente la firme.');
+      await cargar();
+    } catch (err) {
+      error.textContent = err.message;
+      error.scrollIntoView({ block: 'nearest' });
+    } finally {
+      b.disabled = false;
+    }
+  };
 }
 
 const camposRecepcion = o => [
@@ -410,24 +568,12 @@ async function mostrarOrden(id) {
 
   const idx = estados.indexOf(o.estado), cancelada = o.estado === 'CANCELADA', abierta = activa(o);
   const editable = [1, 2].includes(idx) && (admin() || mecanico());
-  const siguiente = abierta ? estados[idx + 1] : null;
-  const puedeAvanzar = siguiente && (siguiente === 'ENTREGADO' ? !mecanico() : admin() || mecanico());
   const serviciosEditables = [0, 1, 2].includes(idx);
   const excedeAutorizado = abierta && o.autorizado_centavos != null && o.total_centavos > Number(o.autorizado_centavos);
-
-  const acciones = boton('Volver a órdenes', 'volver')
-    + (abierta && recepcionOAdmin() ? boton('Cancelar orden', 'cancelar-orden', '', 'peligro') : '')
-    + (puedeAvanzar ? boton(siguiente === 'ENTREGADO' ? 'Registrar entrega' : 'Cambiar a ' + nombresEstado[idx + 1], 'avanzar', `data-id="${id}"`, 'primario') : '');
-
-  const avisoAvance = idx === 1 && !o.autorizado_en
-    ? `<div class="nota-franja alerta-franja">${ico('firma')} La reparación inicia cuando el cliente autoriza el presupuesto. ${recepcionOAdmin() ? 'Regístralo en «Autorización del cliente».' : 'Recepción debe registrar la autorización.'}</div>`
-    : excedeAutorizado
-      ? `<div class="nota-franja alerta-franja">${ico('alerta')} El total actual (${dinero(o.total_centavos)}) supera lo autorizado por el cliente (${dinero(o.autorizado_centavos)}). Hace falta una nueva autorización antes de terminar el trabajo.</div>`
-      : '';
+  const acciones = boton('Volver a órdenes', 'volver') + (abierta && recepcionOAdmin() ? boton('Cancelar orden', 'cancelar-orden', '', 'peligro') : '');
 
   $('#main').innerHTML = cabecera(folio(id), `${esc(o.marca)} ${esc(o.modelo)} · ${esc(o.placas)}`, acciones)
-    + (cancelada ? `<div class="nota-franja alerta-franja">${ico('cancelar')} Orden cancelada el ${fechaHora(o.cancelado_en)} por ${esc(o.cancelado_por_nombre)}. Motivo: ${esc(o.cancelado_motivo)}</div>` : '')
-    + avisoAvance
+    + siguientePaso(o, idx, excedeAutorizado)
     + `<div class="detalle-grid"><div>
     ${panelInformacion(o, idx)}
     ${panelRecepcion(o, abierta)}
@@ -441,6 +587,45 @@ async function mostrarOrden(id) {
     ${recepcionOAdmin() ? panelImprimir() : ''}
     <section class="panel"><div class="panel-titulo"><h2>Actividad de la orden</h2></div><div class="panel-cuerpo">${o.actividad.map(a => `<div class="actividad">${esc(a.accion)}<small>${esc(a.usuario)} · ${fechaHora(a.creado_en)}</small></div>`).join('')}</div></section>
     </aside></div>`;
+}
+
+/**
+ * Recuadro «Siguiente paso»: dice en palabras simples qué toca hacer, quién lo hace
+ * y ofrece el botón exacto. Quien no puede actuar ve qué está esperando.
+ */
+function siguientePaso(o, idx, excede) {
+  const tec = admin() || mecanico(), rec = recepcionOAdmin();
+  const montoPresupuesto = dinero(o.presupuesto_centavos ?? o.total_centavos);
+  const b = (texto, accion, primario = false, extra = '') => boton(texto, accion, extra, primario ? 'primario' : '');
+  let paso;
+  if (o.estado === 'CANCELADA') {
+    paso = o.saldo_centavos > 0
+      ? { quien: rec, titulo: `Orden cancelada con saldo de ${dinero(o.saldo_centavos)}`, texto: `Motivo: ${esc(o.cancelado_motivo)}. Cobra lo pendiente o, si no se cobrará, aplica un descuento.`, botones: b('Cobrar', 'pagar', true, `data-id="${o.id}"`), enEspera: 'Orden cancelada', espera: 'Recepción cobrará lo pendiente.' }
+      : { quien: true, titulo: 'Orden cancelada', texto: `Cancelada el ${fechaHora(o.cancelado_en)} por ${esc(o.cancelado_por_nombre)}. Motivo: ${esc(o.cancelado_motivo)}.`, botones: '' };
+  } else if (idx === 0 || (idx === 1 && !o.diagnostico)) {
+    paso = { quien: tec, titulo: 'Revisa el vehículo y registra el diagnóstico', texto: 'Anota qué encontraste y cuánto costaría la reparación. Recepción se lo comunicará al cliente.', botones: b('Registrar diagnóstico', 'diagnosticar', true),
+      enEspera: 'Esperando el diagnóstico del mecánico', espera: `${esc(o.mecanico)} revisará el vehículo. Mientras, toma fotos e imprime la hoja de recepción para que el cliente la firme.`, extras: rec ? b('Agregar foto', 'foto') + b('Hoja de recepción', 'imprimir', false, 'data-tipo="recepcion"') : '' };
+  } else if (idx === 1 && !o.autorizado_en) {
+    paso = { quien: rec, titulo: 'Pide la autorización del cliente', texto: `Comunica al cliente el diagnóstico y el presupuesto de <strong>${montoPresupuesto}</strong>${o.cliente_telefono ? ` (tel. ${esc(o.cliente_telefono)})` : ''}. Después registra su respuesta.`,
+      botones: b('El cliente autorizó', 'autorizar', true) + b('No autorizó', 'cancelar-orden') + b('Ver presupuesto', 'imprimir', false, 'data-tipo="presupuesto"'),
+      enEspera: 'Esperando la autorización del cliente', espera: 'Recepción le está pidiendo autorización al cliente. Te avisará cuando responda.', extras: tec && !rec ? b('Corregir diagnóstico', 'diagnosticar') : '' };
+  } else if (idx === 1) {
+    paso = { quien: tec, titulo: `El cliente autorizó ${dinero(o.autorizado_centavos)}: ya puedes reparar`, texto: 'Inicia la reparación para poder registrar las refacciones que uses.', botones: b('Iniciar reparación', 'iniciar-reparacion', true), enEspera: 'El cliente ya autorizó', espera: `${esc(o.mecanico)} iniciará la reparación.` };
+  } else if (idx === 2 && excede) {
+    paso = { quien: rec, titulo: 'El trabajo ya cuesta más de lo autorizado', texto: `Total actual <strong>${dinero(o.total_centavos)}</strong>; el cliente autorizó ${dinero(o.autorizado_centavos)}. Consulta al cliente y registra su nueva autorización.`, botones: b('Registrar nueva autorización', 'autorizar', true),
+      enEspera: 'Falta una nueva autorización del cliente', espera: 'El total ya supera lo que autorizó el cliente. Recepción le consultará antes de que termines; mientras, puedes seguir registrando piezas.', extras: tec && !rec ? b('Agregar refacción', 'pieza') + b('Agregar servicio', 'servicio') : '' };
+  } else if (idx === 2) {
+    paso = { quien: tec, titulo: 'Repara y registra lo que uses', texto: 'Agrega las refacciones y servicios conforme los uses. Al terminar, describe el trabajo realizado.', botones: b('Agregar refacción', 'pieza') + b('Agregar servicio', 'servicio') + b('Terminé el trabajo', 'terminar', true), enEspera: 'En reparación', espera: `${esc(o.mecanico)} está reparando el vehículo.` };
+  } else if (idx === 3) {
+    paso = { quien: rec, titulo: 'Avisa al cliente que su vehículo está listo', texto: o.saldo_centavos > 0 ? `Cuando venga, cobra <strong>${dinero(o.saldo_centavos)}</strong> y entrega el vehículo con su recibo.` : 'Ya está pagado. Cuando venga, entrega el vehículo con su recibo.',
+      botones: (o.saldo_centavos > 0 ? b('Cobrar', 'pagar', true, `data-id="${o.id}"`) : '') + b('Entregar vehículo', 'entregar', o.saldo_centavos <= 0) + b('Orden y recibo', 'imprimir', false, 'data-tipo="recibo"'), enEspera: 'Trabajo terminado', espera: 'Recepción avisará al cliente, cobrará y entregará el vehículo.' };
+  } else {
+    paso = o.saldo_centavos > 0
+      ? { quien: rec, titulo: `Entregado con saldo pendiente de ${dinero(o.saldo_centavos)}`, texto: 'Registra el pago cuando el cliente lo haga.', botones: b('Cobrar', 'pagar', true, `data-id="${o.id}"`), enEspera: 'Entregado con saldo pendiente', espera: 'Recepción cobrará el saldo cuando el cliente pague.' }
+      : { quien: true, titulo: 'Orden terminada y pagada', texto: `Entregada el ${fechaHora(o.fecha_entrega)}.`, botones: rec ? b('Orden y recibo', 'imprimir', false, 'data-tipo="recibo"') : '' };
+  }
+  const puede = paso.quien;
+  return `<section class="siguiente-paso ${puede ? '' : 'en-espera'}"><div class="sp-texto"><span class="eyebrow">${puede ? 'Siguiente paso' : 'En espera'}</span><h2>${puede ? paso.titulo : paso.enEspera}</h2><p>${puede ? paso.texto : paso.espera}</p></div>${(puede ? paso.botones : '') + (paso.extras || '') ? `<div class="sp-botones">${puede ? paso.botones : ''}${paso.extras || ''}</div>` : ''}</section>`;
 }
 
 function panelInformacion(o, idx) {
@@ -465,7 +650,7 @@ function panelRecepcion(o, abierta) {
 }
 
 function panelTrabajo(o, editable) {
-  return `<section class="panel"><div class="panel-titulo"><h2>Diagnóstico y reparación</h2>${editable ? boton('Editar trabajo', 'tecnica', '', 'chico') : ''}</div><div class="panel-cuerpo">
+  return `<section class="panel"><div class="panel-titulo"><h2>Diagnóstico y reparación</h2>${editable ? boton('Corregir', 'tecnica', '', 'chico') : ''}</div><div class="panel-cuerpo">
     <h3>Falla reportada</h3><p class="texto-multilinea">${esc(o.falla)}</p><div class="separador"></div>
     <h3>Diagnóstico del mecánico</h3><p class="texto-multilinea">${esc(o.diagnostico) || 'Aún no se ha registrado un diagnóstico.'}</p><div class="separador"></div>
     <h3>Presupuesto estimado</h3><p class="texto-multilinea">${o.presupuesto_centavos != null ? `<strong>${dinero(o.presupuesto_centavos)}</strong>${o.presupuesto_detalle ? ' · ' + esc(o.presupuesto_detalle) : ''}` : 'Aún no se ha registrado un presupuesto.'}</p><div class="separador"></div>
@@ -574,6 +759,39 @@ function accionOrden(accion, el) {
     { nombre: 'presupuesto_detalle', etiqueta: 'Detalle del presupuesto', tipo: 'textarea', valor: o.presupuesto_detalle || '', max: 2000, requerido: false, completo: true },
     { nombre: 'reparaciones', etiqueta: 'Reparaciones realizadas', tipo: 'textarea', valor: o.reparaciones, max: 6000, requerido: false, completo: true },
   ], d => api('orden/tecnica', { ...d, id: ordenActual }));
+
+  // Los formularios por etapa envían también los datos que no se muestran, para no borrarlos.
+  const trabajo = d => ({
+    diagnostico: o.diagnostico, reparaciones: o.reparaciones, mano_obra: decimal(o.mano_obra_centavos),
+    presupuesto: o.presupuesto_centavos != null ? decimal(o.presupuesto_centavos) : '', presupuesto_detalle: o.presupuesto_detalle || '', ...d, id: ordenActual,
+  });
+  if (accion === 'diagnosticar') return formulario('Diagnóstico y presupuesto', [
+    { nombre: 'diagnostico', etiqueta: '¿Qué encontraste?', tipo: 'textarea', valor: o.diagnostico, max: 6000, completo: true, placeholder: 'Ej. Balatas delanteras gastadas al 90 %, discos en buen estado.' },
+    { nombre: 'presupuesto', etiqueta: '¿Cuánto costaría la reparación? · MXN', tipo: 'number', paso: '.01', valor: o.presupuesto_centavos != null ? decimal(o.presupuesto_centavos) : '', completo: true, ayuda: 'Incluye piezas y mano de obra. Es lo que se le pedirá autorizar al cliente.' },
+    { nombre: 'presupuesto_detalle', etiqueta: '¿Qué incluye? (opcional)', tipo: 'textarea', valor: o.presupuesto_detalle || '', max: 2000, requerido: false, completo: true, placeholder: 'Ej. Juego de balatas $850 + mano de obra $400' },
+  ], async d => {
+    if (o.estado === estados[0]) await api('orden/estado', { id: ordenActual, estado: estados[1] });
+    await api('orden/tecnica', trabajo({ diagnostico: d.diagnostico, presupuesto: d.presupuesto, presupuesto_detalle: d.presupuesto_detalle }));
+  }, { boton: 'Guardar diagnóstico', exito: 'Diagnóstico guardado. Recepción pedirá la autorización al cliente.' });
+
+  if (accion === 'iniciar-reparacion') return formulario('Iniciar reparación', [], () => api('orden/estado', { id: ordenActual, estado: estados[2] }), {
+    descripcion: `El cliente autorizó ${dinero(o.autorizado_centavos)}. Al iniciar podrás registrar las refacciones y servicios que uses.`, boton: 'Iniciar reparación', exito: 'Reparación iniciada.',
+  });
+
+  if (accion === 'terminar') return formulario('Terminar el trabajo', [
+    { nombre: 'reparaciones', etiqueta: '¿Qué hiciste?', tipo: 'textarea', valor: o.reparaciones, max: 6000, completo: true, placeholder: 'Ej. Cambio de balatas delanteras y limpieza de calipers.' },
+    { nombre: 'mano_obra', etiqueta: 'Mano de obra que no esté en los servicios · MXN', tipo: 'number', paso: '.01', valor: decimal(o.mano_obra_centavos), completo: true, ayuda: 'Pon 0 si todo el trabajo ya está en los servicios agregados.' },
+  ], async d => {
+    await api('orden/tecnica', trabajo({ reparaciones: d.reparaciones, mano_obra: d.mano_obra }));
+    await api('orden/estado', { id: ordenActual, estado: estados[3] });
+  }, { descripcion: `Refacciones: ${dinero(o.refacciones_centavos)} · Servicios: ${dinero(o.servicios_centavos)}. Revisa que estén todas antes de terminar.`, boton: 'Marcar como listo', exito: 'Trabajo terminado. Recepción avisará al cliente.' });
+
+  if (accion === 'entregar') return formulario('Entregar vehículo', [], () => api('orden/estado', { id: ordenActual, estado: estados[4] }), {
+    descripcion: o.saldo_centavos > 0
+      ? `Todavía debe ${dinero(o.saldo_centavos)}. Puedes entregarlo y cobrar después, pero lo recomendable es cobrar primero. Después de entregar ya no se pueden cambiar precios ni trabajos.`
+      : 'Confirma que el cliente ya recogió su vehículo. Después de entregar ya no se pueden cambiar precios ni trabajos.',
+    boton: 'Confirmar entrega', exito: 'Vehículo entregado.',
+  });
 
   if (accion === 'recepcion') return formulario('Datos de recepción', camposRecepcion(o), d => api('orden/recepcion', { ...d, id: ordenActual }));
 
@@ -701,9 +919,9 @@ document.addEventListener('click', async e => {
     if (accion === 'volver') { ir('ordenes'); return; }
     if (accion === 'pagina') { pagina = Number(el.dataset.num); filtrar(); return; }
     if (accion === 'orden') { vista = 'orden'; ordenActual = id; estructura(); await mostrarOrden(id); return; }
-    if (accion === 'nueva-orden') { nuevaOrden(); return; }
+    if (accion === 'nueva-orden') { recibirVehiculo(); return; }
     if (accion === 'nuevo') {
-      if (vista === 'ordenes') nuevaOrden();
+      if (vista === 'ordenes') recibirVehiculo();
       else if (vista === 'pagos') formulario('Seleccionar orden para pago', [{ nombre: 'id', etiqueta: 'Orden con saldo pendiente', tipo: 'select', completo: true, opciones: datos.ordenes.filter(o => o.saldo_centavos > 0).map(o => [o.id, `${folio(o.id)} · ${o.cliente} · ${dinero(o.saldo_centavos)}`]) }], async d => { await pago(d.id); }, { boton: 'Continuar', continuacion: true });
       else editarRegistro();
       return;
